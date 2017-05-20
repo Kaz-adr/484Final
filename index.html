@@ -1,0 +1,222 @@
+<!--
+<!DOCTYPE html>
+<html>
+    <head><title>Hello world</title></head>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+        function setUsername(){
+            socket.emit('setUsername', document.getElementById('name').value);
+        };
+        var user;
+        socket.on('userExists', function(data){
+            document.getElementById('error-container').innerHTML = data;
+        });
+        socket.on('userSet', function(data){
+            user = data.username;
+            document.body.innerHTML = '<input type="text" id="message">\
+            <button type="button" name="button" onclick="sendMessage()">Send</button>\
+            <div id="message-container"></div>';
+        });
+        function sendMessage(){
+            var msg = document.getElementById('message').value;
+            if(msg){
+                socket.emit('msg', {message: msg, user: user});
+            }
+        }
+        socket.on('newmsg', function(data){
+            if(user){
+                document.getElementById('message-container').innerHTML += '<div><b>' + data.user + '</b>: ' + data.message + '</div>'
+            }
+        })
+    </script>
+    <body>
+        <div id="error-container"></div>
+        <input id="name" type="text" name="name" value="" placeholder="Enter your name!">
+        <button type="button" name="button" onclick="setUsername()">Let me chat!</button>
+    </body>
+</html>
+-->
+<!DOCTYPE html>
+<html>
+  <head><title>Hello world</title></head>
+  <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+/*
+    var socket = io();
+    socket.on('ooo', function(data){
+    	document.body.innerHTML = '';
+    	document.write(data.description);
+    });
+    socket.on('youfool', function(data){
+    	document.body.innerHTML = '';
+    	document.write(data.description);
+    });
+    socket.emit('clientEvent', 'HEY WHAT UP BOI!');
+    */
+  $(function () {
+    var socket = io();
+    var round = 1;
+    var id = -1;
+    var hand = [];
+    var v = [];
+    var score = 0;
+    var isWin;
+    $('.butt').click(function(){
+      socket.emit('begin');
+      
+      return false;
+    });
+    $('form').submit(function(){
+    	v = [];
+    	if(round < 3){
+    		$("#cards input[type=checkbox]:checked").each(function() {
+	    		//console.log($(this).attr('value'));
+	    		v.push($(this).attr('value'));
+	 		});
+	 		console.log(v);
+	 		socket.emit('gimme', {user: id, num: v.length});
+    	}
+    	else{
+    		socket.emit('show', {user: id, crds: hand});
+    		$('#cards').css('visibility', 'hidden');
+    	}
+    	
+ 		
+    	return false;
+    });
+    socket.on('hereugo', function(data){
+    	console.log(data.new);
+    	/*
+    	v.forEach(function(){
+    		//hand[this] = data.new.pop();
+    		console.log(this);
+ 		});
+ 		*/
+ 		if(id == data.user){
+ 			for(i = 0; i < v.length; i++){
+ 				hand[v[i]] = data.new.pop();
+	 		}
+	 		console.log(hand);
+	 		drawHand();
+	 		$('#cards').css('visibility', 'hidden');
+	 		console.log("are we getting");
+ 		}
+ 		
+    });
+    socket.on('yournumber', function(data){
+    	id = data.number
+    	$('#idsection').text('You are player:' + id);
+    });
+    socket.on('ready', function(){
+    	$('body').append($('<p>').text('let the games begin'));
+     	$('.butt').hide();
+    });
+    socket.on('notready', function(){
+    	$('body').append($('<p>').text('wrong number of people'));
+    });
+    socket.on('yourhand', function(data){
+    	if(data.user == id){
+    		console.log(data.hand);
+    		$('#cards').css('visibility', 'visible');
+    		hand = data.hand;
+    		$('body').append($('<p>').text('Round '+ round + ' FIGHT!'));
+    		drawHand();
+    	}
+    });
+    socket.on('nextround', function(){
+    	round++;
+    	$('#cards').css('visibility', 'visible');
+    	if(round < 3){
+    		$('body').append($('<p>').text('Round '+ round + ' FIGHT!'));
+    	}
+    	else{
+    		$('body').append($('<p>').text('Final ROUND, select the button to show your cards'));
+    		//this part STILL ISNT WORKING!!!
+    		$("#remove").html('show cards');
+    	}
+
+    });
+    socket.on('rate', function(data){
+    	if(data.user == id){
+    		iswin = data.score;
+    		console.log(data.score.rank);
+    	}
+    });
+    socket.on('who', function(){
+    	socket.emit('almost', {user: id, win: iswin});
+    });
+    socket.on('winner', function(data){
+    	if(data.user == id){
+    		if(data.winner){
+    			$('body').append($('<p>').text('YEAHHHHHHH WE WON'));
+    			score++;
+    			$('#scoresection').text('Score: ' + score);
+    		}
+    		else{
+    			$('body').append($('<p>').text('better luck next time looooser'));
+    		}
+    		$('.butt').show();
+    	}
+    	
+    });
+    socket.on('reset', function(){
+    	round = 1;
+    	hand = [];
+    	v = [];
+    	isWin = 0;
+    });
+    function drawHand(){
+    	$("label[for='cardone']").html(hand[0]);
+    	$("label[for='cardtwo']").html(hand[1]);
+    	$("label[for='cardthree']").html(hand[2]);
+    	$("label[for='cardfour']").html(hand[3]);
+    	$("label[for='cardfive']").html(hand[4]);
+    }
+  });
+</script>
+  <style>
+      body { font: 20px Helvetica, Arial; }
+      button { width: 9%; 
+      	background: 
+      	rgb(130, 224, 255); 
+      	border: none; 
+      	padding: 10px;
+      	text-align: center;
+      	 }
+      header, footer {
+	    padding: 1em;
+	    color: white;
+	    background-color: rgb(130, 224, 255);
+	    clear: left;
+	    text-align: center;
+	}
+    </style>
+  </head>
+  <body>
+  	<header>
+   <h1>Poker boys
+   <span id="idsection" style="float: left; font: 15px;"></span>
+   <span id="scoresection" style="float: right; font: 15px;">Score: 0</span>
+   </h1>
+	</header>
+	<div>&nbsp;</div>
+	<form id="cards" name="cards" action="" style="visibility: hidden">
+		<label for="cardone">10d</label>
+		<input type="checkbox" name="cardone" value="0">
+		<label for="cardtwo">As</label>
+		<input type="checkbox" name="cardtwo" value="1">
+		<label for="cardthree">Kc</label>
+		<input type="checkbox" name="cardthree" value="2">
+		<label for="cardfour">Qh</label>
+		<input type="checkbox" name="cardfour" value="3">
+		<label for="cardfive">4s</label>
+		<input type="checkbox" name="cardfive" value="4">
+		<button name="remove">remove these cards</button>
+	</form>
+      <button class="butt">Start</button>
+    <div>&nbsp;</div>
+    <footer>r u ready</footer>
+  </body>
+</html>
